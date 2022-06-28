@@ -11,6 +11,7 @@ __Why?__ This way a single pdf file can hold all the data. Also useful to attach
 
 __How?__ `pdf_hyperlink2attachment.py input.pdf output.pdf`
 
+## Introduction
 
 This simple script does the following:
 
