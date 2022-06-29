@@ -52,26 +52,17 @@ def attach_file(pdf, page, annot, uri):
     return pdf.make_indirect(pushpin)
 
 
-def argfile(x):
-
-    x = Path(x)
-    if x.suffix != '.pdf':
-        raise argparse.ArgumentTypeError('Input/Output files must be pdf files.')
-
-    return x
-
-
 def cli_args():
 
     description = 'In a pdf file, convert hyperlinks into attachments.'
     parser = argparse.ArgumentParser(description=description)
 
     parser.add_argument('infile',
-                        type=lambda x: argfile(x),
+                        type=lambda x: Path(x),
                         help='Input pdf file with hyperlinks to local files.')
 
     parser.add_argument('outfile',
-                        type=lambda x: argfile(x),
+                        type=lambda x: Path(x),
                         help='Output pdf file with attachments.')
 
     parser.add_argument('-O', '--overwrite',
@@ -80,6 +71,9 @@ def cli_args():
                         help='Overwrite outfile if exists (Default: False).')
 
     args = parser.parse_args()
+
+    if [args.infile.suffix, args.outfile.suffix] != ['.pdf', '.pdf']:
+        raise argparse.ArgumentTypeError('Input/Output files must be pdf files.')
 
     if not args.infile.exists():
         raise argparse.ArgumentTypeError(f"Input file '{args.infile}' does "
