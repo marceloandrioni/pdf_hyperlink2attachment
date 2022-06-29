@@ -103,12 +103,12 @@ def main():
 
     pdf = Pdf.open(args.infile)
 
-    # Loop based on:
-    # https://stackoverflow.com/a/65977239
+    # Main loop based on:
+    # Post: https://stackoverflow.com/a/65977239
     # Author: https://stackoverflow.com/users/14282700/shivang-raj
     for page in pdf.pages:
-        for idx, annot in enumerate(page.get('/Annots')):
-            uri = annot.get('/A').get('/URI')
+        for idx, annot in enumerate(page.get('/Annots', {})):
+            uri = annot.get('/A', {}).get('/URI')
 
             if uri is None:
                 continue
