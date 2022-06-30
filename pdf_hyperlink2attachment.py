@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-In a pdf file, convert hyperlinks into attachments.
+Convert hyperlinks into attachments.
 
 Only hyperlinks to local files are processed, remote hyperlinks (e.g. http:,
 https:, ftp:, mailto:) are ignored.
@@ -12,10 +12,19 @@ https://github.com/marceloandrioni
 """
 
 import os
+import sys
 from pathlib import Path
 import warnings
 import argparse
 from pikepdf import Pdf, AttachedFileSpec, Name, Dictionary
+from gooey import Gooey, GooeyParser
+
+
+# Use CLI (instead of GUI) if the CLI arguments were passed.
+# https://github.com/chriskiehl/Gooey/issues/449#issuecomment-534056010
+if len(sys.argv) > 1:
+    if '--ignore-gooey' not in sys.argv:
+        sys.argv.append('--ignore-gooey')
 
 
 def attach_file(pdf, annot, filespec):
@@ -46,23 +55,26 @@ def attach_file(pdf, annot, filespec):
     return pdf.make_indirect(pushpin)
 
 
-def cli_args():
+def user_args():
 
-    description = 'In a pdf file, convert hyperlinks into attachments.'
-    parser = argparse.ArgumentParser(description=description)
+    description = 'Convert hyperlinks into attachments.'
+    parser = GooeyParser(description=description)
 
     parser.add_argument('infile',
                         type=lambda x: Path(x),
-                        help='Input pdf file with hyperlinks to local files.')
+                        help='Input pdf file with hyperlinks to local files.',
+                        widget='FileChooser',
+                        gooey_options={
+                            'wildcard': 'PDF file (*.pdf)|*.pdf',
+                            'message': 'Select input pdf file'})
 
     parser.add_argument('outfile',
                         type=lambda x: Path(x),
-                        help='Output pdf file with attachments.')
-
-    parser.add_argument('-O', '--overwrite',
-                        action='store_true',
-                        default=False,
-                        help='Overwrite outfile if exists (Default: False).')
+                        help='Output pdf file with attachments.',
+                        widget='FileSaver',
+                        gooey_options={
+                            'wildcard': 'PDF file (*.pdf)|*.pdf',
+                            'message': 'Select output pdf file'})
 
     args = parser.parse_args()
 
@@ -76,16 +88,15 @@ def cli_args():
     if os.path.samefile(args.infile, args.outfile):
         raise argparse.ArgumentTypeError("Input/Output files can't be the same.")
 
-    if args.outfile.exists() and not args.overwrite:
-        raise argparse.ArgumentTypeError(f"Output file {args.outfile} exist. "
-                                         "Use -O flag to overwrite.")
-
     return args
 
 
+@Gooey(required_cols=1,
+       progress_regex=r"^Page (?P<current>\d+)/(?P<total>\d+)$",
+       progress_expr="current / total * 100")
 def main():
 
-    args = cli_args()
+    args = user_args()
 
     print(f'Input file: {args.infile}')
 
@@ -96,6 +107,9 @@ def main():
     # Author: https://stackoverflow.com/users/14282700/shivang-raj
     filespecs = {}
     for page in pdf.pages:
+
+        print(f'Page {page.index + 1}/{len(pdf.pages)}')
+
         for idx, annot in enumerate(page.get('/Annots', {})):
 
             uri = annot.get('/A', {}).get('/URI')
@@ -119,7 +133,7 @@ def main():
                     uri,
                     description=uri.name)
 
-            print(f"  Page {page.index + 1}: attaching local file '{uri}'")
+            print(f"  Attaching local file '{uri}'")
 
             if not uri.exists():
                 raise ValueError(f"Local file '{uri}' does not exist.")

@@ -1,6 +1,6 @@
 # pdf_hyperlink2attachment
 
-In a pdf file, convert hyperlinks into attachments.
+Convert hyperlinks into attachments.
 
 
 ## TL;DR
@@ -8,8 +8,6 @@ In a pdf file, convert hyperlinks into attachments.
 __What?__ Get all the hyperlinks in a pdf file that reference local files and attach the files to the pdf.
 
 __Why?__ This way a single pdf file can hold all the data. Also useful to attach data that does not "fit" a regular document layout (e.g.: very large tables, non-table and non-image files).
-
-__How?__ `pdf_hyperlink2attachment.py input.pdf output.pdf`
 
 ## Introduction
 
@@ -23,7 +21,7 @@ This simple script does the following:
 With this, all the data is stored in a single pdf file. The user can then send a single file to someone over the internet instead of sending a zip/tar package with the original pdf and the files referenced by the hyperlinks.
 
 ## Requirements
-The only "real" requirement is the [pikepdf](https://pikepdf.readthedocs.io/en/latest/) library. All the other requirements (e.g.: `os`, `pathlib`, `warnings`, `argparse`) are part of the standard python installation.
+The only "real" requirements are the [pikepdf](https://pikepdf.readthedocs.io/en/latest/) and [Gooey](https://github.com/chriskiehl/Gooey) libraries. Both can be easily installed with `conda` or `pip`. All the other requirements (e.g.: `os`, `pathlib`, `warnings`, `argparse`) are part of the standard python installation.
 
 ## How to use?
 
@@ -31,19 +29,34 @@ The only "real" requirement is the [pikepdf](https://pikepdf.readthedocs.io/en/l
 
 * Export the `.docx` file to pdf. __Note:__ the pdf file should be exported, and not "printed" to pdf so the hyperlinks can be preserved.
 
-* Run the script, e.g.:
+* The script can then be run with in CLI or GUI mode.
+
+__CLI__
+
+In the command line just run: `pdf_hyperlink2attachment.py <input.pdf> <output.pdf>`
+
+e.g.:
 
 ```
 $ pdf_hyperlink2attachment.py examples/document.pdf examples/document2.pdf
 Input file: examples/document.pdf
-  Page 1: attaching local file 'examples/tables/table2.xlsx'
-  Page 1: attaching local file 'examples/tables/table1.xlsx'
-  Page 2: attaching local file 'examples/images/image1.png'
+Page 1/3
+  Attaching local file 'examples/tables/table2.xlsx'
+  Attaching local file 'examples/tables/table1.xlsx'
+Page 2/3
+  Attaching local file 'examples/images/image1.png'
+Page 3/3
 Output file: examples/document2.pdf
 Done!
 ```
 
-* Open the newly created file (e.g.: `document2.pdf`) with a pdf viewer and click on any hyperlink to access the data. The file does not depend of the local files (e.g.: `table1.xlsx`, `image1.png`) like the original pdf file (e.g.: `document.pdf`).
+__GUI__
+
+Run the script with no arguments to open the GUI and then select the input and output pdf files.
+
+<img src="./gui_example.png" alt="Firefox" width="600"/>
+
+* Open the newly created file (e.g.: `document2.pdf`) with a pdf viewer and click on any hyperlink to access the data. The file does not depend on the existence of the local files (e.g.: `table1.xlsx`, `image1.png`) like the original pdf file (e.g.: `document.pdf`).
 
 **_NOTE:_** Some pdf viewers (e.g.: Adobe Acrobat Reader, Firefox) show the attached files in a lateral bar, but this is not true for all viewers (e.g.: Evince). It is possible to attach files with the same name from different directories (e.g.: `dir1/myfile.txt`, `dir2/myfile.txt`). The respective hyperlinks will 
 reference the correct attached files, however, the lateral attachment bar will only display the first of the homonymous files.
