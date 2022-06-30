@@ -13,6 +13,7 @@ https://github.com/marceloandrioni
 
 import os
 from pathlib import Path
+import warnings
 import argparse
 from pikepdf import Pdf, AttachedFileSpec, Name, Dictionary
 
@@ -100,6 +101,7 @@ def main():
     # Main loop based on:
     # Post: https://stackoverflow.com/a/65977239
     # Author: https://stackoverflow.com/users/14282700/shivang-raj
+    uris = []
     for page in pdf.pages:
         for idx, annot in enumerate(page.get('/Annots', {})):
             uri = annot.get('/A', {}).get('/URI')
@@ -115,13 +117,24 @@ def main():
 
             uri = args.infile.parent / uri
 
-            print(f"  Attaching local file: '{uri}'")
+            print(f"  Page {page.index + 1}: atttaching local file '{uri}'")
 
             if not uri.exists():
                 raise ValueError(f"Local file '{uri}' does not exist.")
 
             # replace the hyperlink annotation with the attached file annotation
             page['/Annots'][idx] = attach_file(pdf, page, annot, uri)
+
+            uris.append(uri)
+
+    fnames = [x.name for x in uris]
+    if len(fnames) != len(set(fnames)):
+        warnings.warn('There is hyperlinks pointing to files with the same '
+                      'absolute name (ignoring the path). The hyperlinks will '
+                      'point to the correct attached files, however, the '
+                      'lateral attachment bar in pdf viewers (e.g. Adobe '
+                      'Acrobat Reader, Firefox) will only show the first of '
+                      'the homonymous files.')
 
     # linearize=True: Enables creating linear or "fast web view", where the
     # file's contents are organized sequentially so that a viewer can begin

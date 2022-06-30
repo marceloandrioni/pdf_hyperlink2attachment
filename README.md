@@ -45,6 +45,6 @@ Done!
 
 * Open the newly created file (e.g.: `document2.pdf`) with a pdf viewer and click on any hyperlink to access the data. This file does not depend of the local files (e.g.: `table1.xlsx`, `image1.png`) like the original pdf file (e.g.: `document.pdf`).
 
-**_NOTE:_** Some pdf viewers (e.g.: Adobe Acrobat Reader, Firefox) show the attached files in the lateral bar, but this is not true for all viewers (e.g.: Evince). It is possible to attach files with the same name, but from different directories (e.g.: `dir1/myfile.txt`, `dir2/myfile.txt`). The respective hyperlinks will point to the correct attachments, but the lateral bar will only show one of the homonymous files.
+**_NOTE:_** Some pdf viewers (e.g.: Adobe Acrobat Reader, Firefox) show the attached files in the lateral bar, but this is not true for all viewers (e.g.: Evince). It is possible to attach files with the same name, but from different directories (e.g.: `dir1/myfile.txt`, `dir2/myfile.txt`). The respective hyperlinks will point to the correct attachments, however, the lateral bar will only show the first of the homonymous files.
 
 <img src="./firefox_example.png" alt="Firefox" width="600"/>
