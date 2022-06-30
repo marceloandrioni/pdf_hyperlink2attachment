@@ -3,8 +3,8 @@
 """
 In a pdf file, convert hyperlinks into attachments.
 
-Only hyperlinks to local files are processed, remote hyperlinks (e.g. http://,
-https://, ftp://, mailto:) are ignored.
+Only hyperlinks to local files are processed, remote hyperlinks (e.g. http:,
+https:, ftp:, mailto:) are ignored.
 
 Author: Marcelo Andrioni
 https://github.com/marceloandrioni
@@ -18,12 +18,7 @@ import argparse
 from pikepdf import Pdf, AttachedFileSpec, Name, Dictionary
 
 
-def attach_file(pdf, page, annot, uri):
-
-    filespec = AttachedFileSpec.from_filepath(
-        pdf,
-        uri,
-        description=uri.name)
+def attach_file(pdf, annot, filespec):
 
     # https://www.pdftron.com/api/PDFTronSDK/dotnet/pdftron.PDF.Annots.FileAttachment.html
     # Note that FileAttachment icons can differ in their appearance dimensions,
@@ -38,17 +33,15 @@ def attach_file(pdf, page, annot, uri):
     # transparent block over the hyperlinked text
     icon_name = 'None'
 
-    pushpin = Dictionary(
-        Type=Name('/Annot'),
-        Subtype=Name('/FileAttachment'),
-        Name=Name(f'/{icon_name}'),
-        FS=filespec.obj,
-        Rect=annot['/Rect'],
-        Contents=uri.name,   # file description
-        C=(1.0, 1.0, 0.0),   # color
-        T=None,   # author
-        M=None,   # modification date, e.g.: 'D:20210101000000'
-    )
+    pushpin = Dictionary(Type=Name('/Annot'),
+                         Subtype=Name('/FileAttachment'),
+                         Name=Name(f'/{icon_name}'),
+                         FS=filespec.obj,
+                         Rect=annot['/Rect'],
+                         Contents=filespec.description,   # file description
+                         C=(1.0, 1.0, 0.0),   # color
+                         T=None,   # author
+                         M=None)   # modification date, e.g.: 'D:20210101000000'
 
     return pdf.make_indirect(pushpin)
 
@@ -101,7 +94,7 @@ def main():
     # Main loop based on:
     # Post: https://stackoverflow.com/a/65977239
     # Author: https://stackoverflow.com/users/14282700/shivang-raj
-    uris = []
+    filespecs = {}
     for page in pdf.pages:
         for idx, annot in enumerate(page.get('/Annots', {})):
 
@@ -113,34 +106,47 @@ def main():
             uri = str(uri)
 
             # do nothing if remote link
-            if uri.startswith(('http://', 'https://', 'ftp://', 'mailto:')):
+            if uri.startswith(('http:', 'https:', 'ftp:', 'mailto:')):
                 continue
 
             uri = args.infile.parent / uri
 
-            print(f"  Page {page.index + 1}: atttaching local file '{uri}'")
+            # avoid attaching copies of the same file if two or more hyperlinks
+            # reference the file.
+            if uri not in filespecs:
+                filespecs[uri] = AttachedFileSpec.from_filepath(
+                    pdf,
+                    uri,
+                    description=uri.name)
+
+            print(f"  Page {page.index + 1}: attaching local file '{uri}'")
 
             if not uri.exists():
                 raise ValueError(f"Local file '{uri}' does not exist.")
 
             # replace the hyperlink annotation with the attached file annotation
-            page['/Annots'][idx] = attach_file(pdf, page, annot, uri)
+            page['/Annots'][idx] = attach_file(pdf, annot, filespecs[uri])
 
-            uris.append(uri)
-
-    fnames = [x.name for x in uris]
+    fnames = [x.name for x in filespecs.keys()]
     if len(fnames) != len(set(fnames)):
-        warnings.warn('There is hyperlinks pointing to files with the same '
-                      'absolute name (ignoring the path). The hyperlinks will '
-                      'point to the correct attached files, however, the '
-                      'lateral attachment bar in pdf viewers (e.g. Adobe '
-                      'Acrobat Reader, Firefox) will only show the first of '
-                      'the homonymous files.')
+        warnings.warn(
+            'There is hyperlinks referencing files with the same name '
+            '(not taking into account the directory path). The hyperlinks will '
+            'reference the correct attached files in the output pdf, however, '
+            'the lateral attachment bar in pdf viewers (e.g. Adobe Acrobat '
+            'Reader, Firefox) will only display the first of the homonymous files.'
+        )
+
+    # Default page layout when opening the pdf file. Some viewers may ignore it.
+    # https://pikepdf.readthedocs.io/en/latest/topics/pagelayout.html
+    pdf.Root.PageLayout = Name.OneColumn
+    pdf.Root.PageMode = Name.UseOutlines
 
     # linearize=True: Enables creating linear or "fast web view", where the
     # file's contents are organized sequentially so that a viewer can begin
     # rendering before it has the whole file. As a drawback, it tends to make
     # files larger.
+    # https://pikepdf.readthedocs.io/en/latest/api/main.html#pikepdf.Pdf.save
     pdf.save(args.outfile, linearize=True)
     pdf.close()
 
