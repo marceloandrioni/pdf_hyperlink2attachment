@@ -36,16 +36,16 @@ The only "real" requirement is the [pikepdf](https://pikepdf.readthedocs.io/en/l
 ```
 $ pdf_hyperlink2attachment.py examples/document.pdf examples/document2.pdf
 Input file: examples/document.pdf
-  Attaching local file: 'examples/tables/table2.xlsx'
-  Attaching local file: 'examples/tables/table1.xlsx'
-  Attaching local file: 'examples/images/image1.png'
+  Page 1: attaching local file 'examples/tables/table2.xlsx'
+  Page 1: attaching local file 'examples/tables/table1.xlsx'
+  Page 2: attaching local file 'examples/images/image1.png'
 Output file: examples/document2.pdf
 Done!
 ```
 
-* Open the newly created file (e.g.: `document2.pdf`) with a pdf viewer and click on any hyperlink to access the data. This file does not depend of the local files (e.g.: `table1.xlsx`, `image1.png`) like the original pdf file (e.g.: `document.pdf`).
+* Open the newly created file (e.g.: `document2.pdf`) with a pdf viewer and click on any hyperlink to access the data. The file does not depend of the local files (e.g.: `table1.xlsx`, `image1.png`) like the original pdf file (e.g.: `document.pdf`).
 
-**_NOTE:_** Some pdf viewers (e.g.: Adobe Acrobat Reader, Firefox) show the attached files in the lateral bar, but this is not true for all viewers (e.g.: Evince). It is possible to attach files with the same name, but from different directories (e.g.: `dir1/myfile.txt`, `dir2/myfile.txt`). The respective hyperlinks will 
-reference the correct attached files, however, the lateral attachment bar in pdf viewers (e.g. Adobe Acrobat Reader, Firefox) will only display the first of the homonymous files.
+**_NOTE:_** Some pdf viewers (e.g.: Adobe Acrobat Reader, Firefox) show the attached files in a lateral bar, but this is not true for all viewers (e.g.: Evince). It is possible to attach files with the same name from different directories (e.g.: `dir1/myfile.txt`, `dir2/myfile.txt`). The respective hyperlinks will 
+reference the correct attached files, however, the lateral attachment bar will only display the first of the homonymous files.
 
 <img src="./firefox_example.png" alt="Firefox" width="600"/>
