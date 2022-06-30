@@ -104,6 +104,7 @@ def main():
     uris = []
     for page in pdf.pages:
         for idx, annot in enumerate(page.get('/Annots', {})):
+
             uri = annot.get('/A', {}).get('/URI')
 
             if uri is None:
