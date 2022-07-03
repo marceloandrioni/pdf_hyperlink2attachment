@@ -23,6 +23,8 @@ With this, all the data is stored in a single pdf file. The user can then send a
 ## Requirements
 The only "real" requirements are the [pikepdf](https://pikepdf.readthedocs.io/en/latest/) and [Gooey](https://github.com/chriskiehl/Gooey) libraries. Both can be easily installed with `conda` or `pip`. All the other requirements (e.g.: `os`, `pathlib`, `warnings`, `argparse`) are part of the standard python installation.
 
+__Note:__ `pikepdf` conda installation is only available in Linux and OSX. In Windows it should be installed with pip: `pip install pikepdf`
+
 ## How to use?
 
 * Using Microsof Word or LibreOffice Writer, just highlight the desired text and insert an hyperlink to a local file.
