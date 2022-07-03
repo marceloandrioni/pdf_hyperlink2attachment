@@ -157,8 +157,8 @@ def main():
     pdf.Root.PageMode = Name.UseOutlines
 
     # dot not allow a regular user to change the annotations. This is a simply a
-    # protection so that the user does not remove the attached file annotation
-    # when vieweing the file in Acrobat Reader.
+    # protection so that the user does not accidentally remove the attached file
+    # annotation when viewing the file in Acrobat Reader.
     allow = Permissions(accessibility=True,
                         extract=True,
                         modify_annotation=False,
