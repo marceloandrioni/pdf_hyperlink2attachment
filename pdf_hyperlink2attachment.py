@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 import warnings
 import argparse
-from pikepdf import Pdf, AttachedFileSpec, Name, Dictionary
+from pikepdf import Pdf, AttachedFileSpec, Name, Dictionary, Encryption, Permissions
 from gooey import Gooey, GooeyParser
 
 
@@ -156,12 +156,26 @@ def main():
     pdf.Root.PageLayout = Name.OneColumn
     pdf.Root.PageMode = Name.UseOutlines
 
+    # dot not allow a regular user to change the annotations. This is a simply a
+    # protection so that the user does not remove the attached file annotation
+    # when vieweing the file in Acrobat Reader.
+    allow = Permissions(accessibility=True,
+                        extract=True,
+                        modify_annotation=False,
+                        modify_assembly=False,
+                        modify_form=False,
+                        modify_other=False,
+                        print_lowres=True,
+                        print_highres=True)
+    encryption = Encryption(user='', owner='', allow=allow)
+
     # linearize=True: Enables creating linear or "fast web view", where the
     # file's contents are organized sequentially so that a viewer can begin
     # rendering before it has the whole file. As a drawback, it tends to make
     # files larger.
     # https://pikepdf.readthedocs.io/en/latest/api/main.html#pikepdf.Pdf.save
-    pdf.save(args.outfile, linearize=True)
+    pdf.save(args.outfile, linearize=True, encryption=encryption)
+
     pdf.close()
 
     print(f'Output file: {args.outfile}')
