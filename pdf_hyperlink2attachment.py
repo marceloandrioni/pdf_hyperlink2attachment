@@ -40,6 +40,11 @@ def attach_file(pdf, annot, filespec):
 
     # using a random name (not one of the four allowed ones) to draw a
     # transparent block over the hyperlinked text
+    # Note: this does not work on Adobe Acrobat Reader, where the viewer
+    # defaults to the PushPin if the icon name is unknown. The ideal option
+    # would be to include an appearance stream with the annotation so that all
+    # viewers would show the same icon (maybe a rectangle with the hyperlink
+    # text inside based on https://github.com/plangrid/pdf-annotate).
     icon_name = 'None'
 
     pushpin = Dictionary(Type=Name('/Annot'),
@@ -158,7 +163,7 @@ def main():
 
     # dot not allow a regular user to change the annotations. This is a simply a
     # protection so that the user does not accidentally remove the attached file
-    # annotation when viewing the file in Acrobat Reader.
+    # annotation when viewing the file in Adobe Acrobat Reader.
     allow = Permissions(accessibility=True,
                         extract=True,
                         modify_annotation=False,
