@@ -90,7 +90,7 @@ def user_args():
         raise argparse.ArgumentTypeError(f"Input file '{args.infile}' does "
                                          "not exist.")
 
-    if os.path.samefile(args.infile, args.outfile):
+    if args.outfile.exists() and os.path.samefile(args.infile, args.outfile):
         raise argparse.ArgumentTypeError("Input/Output files can't be the same.")
 
     return args

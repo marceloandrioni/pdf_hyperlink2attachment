@@ -29,7 +29,7 @@ __Note:__ `pikepdf` conda installation is only available in Linux and OSX. In Wi
 
 * Using Microsof Word or LibreOffice Writer, just highlight the desired text and insert an hyperlink to a local file.
 
-* Export the `.docx` file to pdf. __Note:__ the pdf file should be exported, and not "printed" to pdf so the hyperlinks can be preserved.
+* Export the `.docx` file to pdf. __Note:__ the pdf file should be exported, and not "printed" to pdf so the hyperlinks can be preserved. Open the pdf file and check if the hyperlinks were correctly exported.
 
 * The script can then be run with in CLI or GUI mode.
 
