@@ -172,7 +172,7 @@ def main():
                         modify_other=False,
                         print_lowres=True,
                         print_highres=True)
-    encryption = Encryption(user='', owner='', allow=allow)
+    encryption = Encryption(user='', owner='password', allow=allow)
 
     # linearize=True: Enables creating linear or "fast web view", where the
     # file's contents are organized sequentially so that a viewer can begin
