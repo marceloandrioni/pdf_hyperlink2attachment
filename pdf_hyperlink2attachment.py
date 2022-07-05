@@ -13,6 +13,7 @@ https://github.com/marceloandrioni
 
 import os
 import sys
+import re
 from pathlib import Path
 import warnings
 import argparse
@@ -96,6 +97,30 @@ def user_args():
     return args
 
 
+def check_uri(uri, relative_path):
+    """Path if uri is a valid local file, else, None."""
+
+    if uri is None:
+        return
+
+    uri = str(uri)
+
+    # do nothing if remote link
+    if uri.startswith(('http:', 'https:', 'ftp:', 'mailto:')):
+        return
+
+    # if uri starts with "file:" the path is absolute, else, is relative
+    if uri.startswith('file:///'):
+        uri = Path(re.sub('^file:///', '', uri))
+    else:
+        uri = relative_path / uri
+
+    if not uri.exists():
+        raise ValueError(f"Local file '{uri}' does not exist.")
+
+    return uri
+
+
 @Gooey(required_cols=1,
        progress_regex=r"^Page (?P<current>\d+)/(?P<total>\d+)$",
        progress_expr="current / total * 100")
@@ -119,16 +144,12 @@ def main():
 
             uri = annot.get('/A', {}).get('/URI')
 
+            uri = check_uri(uri, args.infile.parent)
+
             if uri is None:
                 continue
 
-            uri = str(uri)
-
-            # do nothing if remote link
-            if uri.startswith(('http:', 'https:', 'ftp:', 'mailto:')):
-                continue
-
-            uri = args.infile.parent / uri
+            print(f"  Attaching local file '{uri}'")
 
             # avoid attaching copies of the same file if two or more hyperlinks
             # reference the file.
@@ -137,11 +158,6 @@ def main():
                     pdf,
                     uri,
                     description=uri.name)
-
-            print(f"  Attaching local file '{uri}'")
-
-            if not uri.exists():
-                raise ValueError(f"Local file '{uri}' does not exist.")
 
             # replace the hyperlink annotation with the attached file annotation
             page['/Annots'][idx] = attach_file(pdf, annot, filespecs[uri])

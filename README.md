@@ -23,7 +23,7 @@ With this, all the data is stored in a single pdf file. The user can then send a
 ## Requirements
 The only "real" requirements are the [pikepdf](https://pikepdf.readthedocs.io/en/latest/) and [Gooey](https://github.com/chriskiehl/Gooey) libraries. Both can be easily installed with `conda` or `pip`. All the other requirements (e.g.: `os`, `pathlib`, `warnings`, `argparse`) are part of the standard python installation.
 
-__Note:__ `pikepdf` conda installation is only available in Linux and OSX. In Windows it should be installed with pip: `pip install pikepdf`
+__Note:__ pikepdf anaconda [installation](https://anaconda.org/conda-forge/pikepdf) is only available in Linux and OSX. In Windows it should be installed with pip: `pip install pikepdf`
 
 ## How to use?
 
@@ -60,7 +60,11 @@ Run the script with no arguments to open the GUI and then select the input and o
 
 * Open the newly created file (e.g.: `document2.pdf`) with a pdf viewer and click on any hyperlink to access the data. The file does not depend on the existence of the local files (e.g.: `table1.xlsx`, `image1.png`) like the original pdf file (e.g.: `document.pdf`).
 
-**_NOTE:_** Some pdf viewers (e.g.: Adobe Acrobat Reader, Firefox) show the attached files in a lateral bar, but this is not true for all viewers (e.g.: Evince). It is possible to attach files with the same name from different directories (e.g.: `dir1/myfile.txt`, `dir2/myfile.txt`). The respective hyperlinks will 
-reference the correct attached files, however, the lateral attachment bar will only display the first of the homonymous files.
+**_NOTE:_** Some pdf viewers (e.g.: Adobe Acrobat Reader, Firefox) show the attached files in a lateral bar, but this is not true for all viewers (e.g.: Evince). It is possible to attach files with the same name from different directories (e.g.: `dir1/myfile.txt`, `dir2/myfile.txt`). The respective hyperlinks will reference the correct attached files, however, the lateral attachment bar will only display the first of the homonymous files.
 
-<img src="./firefox_example.png" alt="Firefox" width="600"/>
+**_NOTE:_** The attached file annotation is created with an invalid name for the icon to be used. This is done so that an empty rectangle is draw over the hyperlink text (desired behavior). This kludge works on most of the available pdf viewers, the only exception is Adobe Acrobat Reader, that defaults to the PushPin icon when an invalid icon name is found.
+
+Adobe Acrobat Reader       |  Firefox
+:-------------------------:|:-------------------------:
+<img src="./adobe_example.png" alt="Firefox" width="500"/> | <img src="./firefox_example.png" alt="Firefox" width="500"/>
+
