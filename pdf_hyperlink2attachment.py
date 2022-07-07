@@ -112,17 +112,10 @@ def check_uri(uri, relative_path):
     # if uri starts with "file:" the path is absolute, else, is relative
     if uri.startswith('file:///'):
 
-        # three slashes -> local file, e.g.:
+        # three slashes:
         # file:///C:/eclipse/eclipse.ini
+        # file://///mynetwordir/eclipse.ini
         uri = Path(re.sub('^file:///', '', uri))
-
-    if uri.startswith('file://'):
-
-        # two slashes -> remote file, e.g.:
-        # file://Gogul2/shareddocs/autostart.txt
-        # Note: it the remote folder in mounted, the file address is treated as
-        #       local, e.g.: file:///X:/Gogul2/shareddocs/autostart.txt
-        uri = Path(re.sub('^file://', '', uri))
 
     else:
 
