@@ -16,7 +16,7 @@ import re
 from pathlib import Path
 import warnings
 import argparse
-from pikepdf import Pdf, AttachedFileSpec, Name, Dictionary, Encryption, Permissions
+from pikepdf import Pdf, AttachedFileSpec, Name, Dictionary, Permissions, Encryption
 from gooey import Gooey, GooeyParser
 
 
@@ -184,9 +184,9 @@ def main():
     pdf.Root.PageLayout = Name.OneColumn
     pdf.Root.PageMode = Name.UseOutlines
 
-    # dot not allow a regular user to change the annotations. This is a simply a
-    # protection so that the user does not accidentally remove the attached file
-    # annotation when viewing the file in Adobe Acrobat Reader.
+    # Do not allow a regular user to modify the file.
+    # This is a simply a protection so that the user does not accidentally remove
+    # the attached file annotation when viewing the file in Adobe Acrobat Reader.
     allow = Permissions(accessibility=True,
                         extract=True,
                         modify_annotation=False,
@@ -195,7 +195,7 @@ def main():
                         modify_other=False,
                         print_lowres=True,
                         print_highres=True)
-    encryption = Encryption(user='', owner='password', allow=allow)
+    encryption = Encryption(user='', owner='admin123', allow=allow)
 
     print(f'Output file: {args.outfile}')
     # linearize=True: Enables creating linear or "fast web view", where the
