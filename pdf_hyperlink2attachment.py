@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Convert hyperlinks into attachments.
+"""Convert hyperlinks into attachments.
 
 Only hyperlinks to local files are processed, remote hyperlinks (e.g. http:,
 https:, ftp:, mailto:) are ignored.
@@ -64,7 +63,8 @@ def attach_file(pdf, annot, filespec):
 def user_args():
 
     description = 'Convert hyperlinks into attachments.'
-    parser = GooeyParser(description=description)
+    parser = GooeyParser(description=description,
+                         allow_abbrev=False)
 
     parser.add_argument('infile',
                         type=lambda x: Path(x),
@@ -197,6 +197,7 @@ def main():
                         print_highres=True)
     encryption = Encryption(user='', owner='password', allow=allow)
 
+    print(f'Output file: {args.outfile}')
     # linearize=True: Enables creating linear or "fast web view", where the
     # file's contents are organized sequentially so that a viewer can begin
     # rendering before it has the whole file. As a drawback, it tends to make
@@ -205,8 +206,6 @@ def main():
     pdf.save(args.outfile, linearize=True, encryption=encryption)
 
     pdf.close()
-
-    print(f'Output file: {args.outfile}')
 
     print('Done!')
 
