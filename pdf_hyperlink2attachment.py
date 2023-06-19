@@ -16,7 +16,8 @@ import re
 from pathlib import Path
 import warnings
 import argparse
-from pikepdf import Pdf, AttachedFileSpec, Name, Dictionary, Permissions, Encryption
+from pikepdf import (Pdf, AttachedFileSpec, Name, Dictionary, Permissions,
+                     Encryption)
 from gooey import Gooey, GooeyParser
 
 
@@ -29,27 +30,9 @@ if len(sys.argv) > 1:
 
 def attach_file(pdf, annot, filespec):
 
-    # https://www.pdftron.com/api/PDFTronSDK/dotnet/pdftron.PDF.Annots.FileAttachment.html
-    # Note that FileAttachment icons can differ in their appearance dimensions,
-    # so you may want to match these Rectangle dimensions or the aspect ratio
-    # to avoid a squished or stretched appearance :
-    # Graph : 40 x 40
-    # PushPin : 28 x 40
-    # Paperclip : 14 x 34
-    # Tag : 40 x 32
-
-    # using a random name (not one of the four allowed ones) to draw a
-    # transparent block over the hyperlinked text
-    # Note: this does not work on Adobe Acrobat Reader, where the viewer
-    # defaults to the PushPin if the icon name is unknown. The ideal option
-    # would be to include an appearance stream with the annotation so that all
-    # viewers would show the same icon (maybe a rectangle with the hyperlink
-    # text inside based on https://github.com/plangrid/pdf-annotate).
-    icon_name = 'None'
-
     pushpin = Dictionary(Type=Name('/Annot'),
                          Subtype=Name('/FileAttachment'),
-                         Name=Name(f'/{icon_name}'),
+                         Name=Name('/PushPin'),
                          FS=filespec.obj,
                          Rect=annot['/Rect'],
                          Contents=filespec.description,   # file description
@@ -57,6 +40,26 @@ def attach_file(pdf, annot, filespec):
                          T=None,   # author
                          M=None)   # modification date, e.g.: 'D:20210101000000'
 
+    # Get an appearance stream from another file and use it in place of the
+    # PushPin icon.
+    #
+    # Note: as each viewer (Adobe, Evince, Okular, etc) has it own
+    # implementation of the default icons (Graph, PushPin, Paperclip, Tag), the
+    # icons do not have a standard appearance. Also, some viewers (e.g. the
+    # ones in Google Chrome and Microsoft Edge), only follow the v2 pdf 
+    # standard, where there is no default icons, so no icon is show.
+    # The fix is to use an appearance stream, basically a dictionary listing
+    # exactly how the annotation/icon should be represented. This way the 
+    # annotation/icon shows the same in all viewers.
+    # I could not create an appearance stream from scratch, so the solution was
+    # to use pdf-annotate (https://github.com/plangrid/pdf-annotate) to save an
+    # appearance stream to a file and reuse it here.
+
+    as_file = (Path(__file__).parent
+               / 'appearance_stream/file_with_appearance_stream.pdf')
+    with Pdf.open(as_file) as pdf2:
+        pushpin['/AP'] = pdf.copy_foreign(pdf2.pages[0]['/Annots'][0])['/AP']
+    
     return pdf.make_indirect(pushpin)
 
 
@@ -185,7 +188,7 @@ def main():
     pdf.Root.PageMode = Name.UseOutlines
 
     # Do not allow a regular user to modify the file.
-    # This is a simply a protection so that the user does not accidentally remove
+    # This is simply a protection so that the user does not accidentally remove
     # the attached file annotation when viewing the file in Adobe Acrobat Reader.
     allow = Permissions(accessibility=True,
                         extract=True,

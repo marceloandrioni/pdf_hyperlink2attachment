@@ -62,9 +62,3 @@ Run the script with no arguments to open the GUI and then select the input and o
 
 **_NOTE:_** Some pdf viewers (e.g.: Adobe Acrobat Reader, Firefox) show the attached files in a lateral bar, but this is not true for all viewers (e.g.: Evince). It is possible to attach files with the same name from different directories (e.g.: `dir1/myfile.txt`, `dir2/myfile.txt`). The respective hyperlinks will reference the correct attached files, however, the lateral attachment bar will only display the first of the homonymous files.
 
-**_NOTE:_** The attached file annotation is created with an invalid name for the icon to be used. This is done so that an empty rectangle is draw over the hyperlink text (desired behavior). This kludge works on most of the available pdf viewers, the only exception is Adobe Acrobat Reader, that defaults to the PushPin icon when an invalid icon name is found.
-
-Adobe Acrobat Reader       |  Firefox
-:-------------------------:|:-------------------------:
-<img src="./adobe_example.png" alt="Firefox" width="500"/> | <img src="./firefox_example.png" alt="Firefox" width="500"/>
-
