@@ -7,7 +7,7 @@ Convert hyperlinks into attachments.
 
 __What?__ Get all the hyperlinks in a pdf file that reference local files and attach the files to the pdf.
 
-__Why?__ This way a single pdf file can hold all the data. Also useful to attach data that does not "fit" a regular document layout (e.g.: very large tables, non-table and non-image files). See this [file](examples/document2.pdf) as an example.
+__Why?__ This way a single pdf file can hold all the data. Also useful to attach data that does not "fit" a regular document layout (e.g.: very large tables, non-table and non-image files). Download and open this [file](examples/document2.pdf) in a pdf viewer to see an example of this. __Note__: a "real" pdf viewer (e.g.: Adobe, Firefox, Chrome, Edge, Evince, Okular, etc) should be used, the pdf render "inside" GitHub is not enough.
 
 ## Introduction
 
@@ -65,7 +65,7 @@ Run the script with no arguments to open the GUI and then select the input and o
 
 * Open the newly created file (e.g.: `document2.pdf`) with a pdf viewer and click on any hyperlink to access the data. The file does not depend on the existence of the local files (e.g.: `table1.xlsx`, `image1.png`) like the original pdf file (e.g.: `document.pdf`).
 
-**_NOTE:_** Some pdf viewers (e.g.: Adobe Acrobat Reader, Firefox) show the attached files in a lateral bar, but this is not true for all viewers (e.g.: Evince). It is possible to attach files with the same name from different directories (e.g.: `dir1/myfile.txt`, `dir2/myfile.txt`). The respective hyperlinks will reference the correct attached files, however, some viewer (e.g.: Adobe) will show all the attached files, while other (e.g.: Firefox) will display only the first of the homonymous files.
+**_NOTE:_** Some pdf viewers (e.g.: Adobe Acrobat Reader, Firefox) show the attached files in a lateral bar, but this is not true for all viewers (e.g.: Evince). It is possible to attach files with the same name from different directories (e.g.: `dir1/myfile.txt`, `dir2/myfile.txt`). The respective hyperlinks will reference the correct attached files, however, some viewers (e.g.: Adobe) will show all the attached files, while others (e.g.: Firefox), will display only the first of the homonymous files.
 
 Adobe Acrobat Reader       |  Firefox
 :-------------------------:|:-------------------------:
