@@ -1,0 +1,29 @@
+*.egg-info
+*.py[co]
+.DS_Store
+
+# vim
+*.sw[op]
+
+# pyenv
+.python-version
+venv
+
+# ctags
+tags
+
+# local testing
+scripts
+tests/end_to_end/pdfs/end_to_end*
+
+.pytest_cache
+.tox
+
+build/
+dist/
+
+# pycharm
+.idea
+
+# vscode
+.vscode

@@ -16,9 +16,14 @@ import re
 from pathlib import Path
 import warnings
 import argparse
+import tempfile
 from pikepdf import (Pdf, AttachedFileSpec, Name, Dictionary, Permissions,
                      Encryption)
 from gooey import Gooey, GooeyParser
+
+indir = Path(__file__).resolve().parent / 'external/pdf_annotate'
+sys.path.append(str(indir))
+from pdf_annotate import PdfAnnotator, Location, Appearance
 
 
 # Use CLI (instead of GUI) if the CLI arguments were passed.
@@ -26,6 +31,55 @@ from gooey import Gooey, GooeyParser
 if len(sys.argv) > 1:
     if '--ignore-gooey' not in sys.argv:
         sys.argv.append('--ignore-gooey')
+
+
+def create_appearance_stream(rect, pdf):
+    """Return a appearance stream."""
+
+    # Note: As each viewer (Adobe, Evince, Okular, etc) has it own
+    # implementation of the default icons (Graph, PushPin, Paperclip, Tag), the
+    # icons do not have a standard appearance. Also, some viewers (e.g. the
+    # ones in Google Chrome and Microsoft Edge), only accept the v2 pdf
+    # standard, where there is no default icons, so no icon is show.
+    # The fix is to use an appearance stream, basically a dictionary listing
+    # exactly how the annotation/icon should be represented. This way the
+    # annotation/icon shows the same in all viewers.
+    # I could not create an appearance stream from scratch, so the solution was
+    # to use pdf-annotate (https://github.com/plangrid/pdf-annotate) to save an
+    # appearance stream to a file and reuse it.
+
+    # temporary files
+    tmp_file = tempfile.mktemp(suffix='.pdf')
+    tmp_file2 = tempfile.mktemp(suffix='.pdf')
+
+    # create empty file tmp_file
+    with Pdf.new() as fp:
+        fp.add_blank_page()
+        fp.save(tmp_file)
+
+    # add annotation to empty file and save it as tmp_file2
+    fp = PdfAnnotator(tmp_file)
+    fp.add_annotation(
+        'square',
+        Location(page=0,
+                 x1=float(rect[0]),
+                 y1=float(rect[1]),
+                 x2=float(rect[2]),
+                 y2=float(rect[3])),
+        Appearance(stroke_color=(1, 0, 0),
+                   stroke_width=1,
+                   stroke_transparency=0.5))
+    fp.write(tmp_file2)
+
+    # copy the appearance stream from tmp_file2 to the main pdf
+    with Pdf.open(tmp_file2) as pdf2:
+        ap = pdf.copy_foreign(pdf2.pages[0]['/Annots'][0])['/AP']
+
+    # remove temporary files
+    os.remove(tmp_file)
+    os.remove(tmp_file2)
+
+    return ap
 
 
 def attach_file(pdf, annot, filespec):
@@ -40,26 +94,9 @@ def attach_file(pdf, annot, filespec):
                          T=None,   # author
                          M=None)   # modification date, e.g.: 'D:20210101000000'
 
-    # Get an appearance stream from another file and use it in place of the
-    # PushPin icon.
-    #
-    # Note: as each viewer (Adobe, Evince, Okular, etc) has it own
-    # implementation of the default icons (Graph, PushPin, Paperclip, Tag), the
-    # icons do not have a standard appearance. Also, some viewers (e.g. the
-    # ones in Google Chrome and Microsoft Edge), only follow the v2 pdf 
-    # standard, where there is no default icons, so no icon is show.
-    # The fix is to use an appearance stream, basically a dictionary listing
-    # exactly how the annotation/icon should be represented. This way the 
-    # annotation/icon shows the same in all viewers.
-    # I could not create an appearance stream from scratch, so the solution was
-    # to use pdf-annotate (https://github.com/plangrid/pdf-annotate) to save an
-    # appearance stream to a file and reuse it here.
+    # Get an appearance stream and use it instead of the PushPin icon.
+    pushpin['/AP'] = create_appearance_stream(annot['/Rect'], pdf)
 
-    as_file = (Path(__file__).parent
-               / 'appearance_stream/file_with_appearance_stream.pdf')
-    with Pdf.open(as_file) as pdf2:
-        pushpin['/AP'] = pdf.copy_foreign(pdf2.pages[0]['/Annots'][0])['/AP']
-    
     return pdf.make_indirect(pushpin)
 
 
