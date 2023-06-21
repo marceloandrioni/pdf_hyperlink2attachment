@@ -10,10 +10,12 @@ https://github.com/marceloandrioni
 
 """
 
+
 import os
 import sys
 import re
 from pathlib import Path
+from collections import namedtuple
 import warnings
 import argparse
 import tempfile
@@ -31,73 +33,6 @@ from pdf_annotate import PdfAnnotator, Location, Appearance
 if len(sys.argv) > 1:
     if '--ignore-gooey' not in sys.argv:
         sys.argv.append('--ignore-gooey')
-
-
-def create_appearance_stream(rect, pdf):
-    """Return a appearance stream."""
-
-    # Note: As each viewer (Adobe, Evince, Okular, etc) has it own
-    # implementation of the default icons (Graph, PushPin, Paperclip, Tag), the
-    # icons do not have a standard appearance. Also, some viewers (e.g. the
-    # ones in Google Chrome and Microsoft Edge), only accept the v2 pdf
-    # standard, where there is no default icons, so no icon is show.
-    # The fix is to use an appearance stream, basically a dictionary listing
-    # exactly how the annotation/icon should be represented. This way the
-    # annotation/icon shows the same in all viewers.
-    # I could not create an appearance stream from scratch, so the solution was
-    # to use pdf-annotate (https://github.com/plangrid/pdf-annotate) to save an
-    # appearance stream to a file and reuse it.
-
-    # temporary files
-    tmp_file = tempfile.mktemp(suffix='.pdf')
-    tmp_file2 = tempfile.mktemp(suffix='.pdf')
-
-    # create empty file tmp_file
-    with Pdf.new() as fp:
-        fp.add_blank_page()
-        fp.save(tmp_file)
-
-    # add annotation to empty file and save it as tmp_file2
-    fp = PdfAnnotator(tmp_file)
-    fp.add_annotation(
-        'square',
-        Location(page=0,
-                 x1=float(rect[0]),
-                 y1=float(rect[1]),
-                 x2=float(rect[2]),
-                 y2=float(rect[3])),
-        Appearance(stroke_color=(1, 0, 0),
-                   stroke_width=1,
-                   stroke_transparency=0.5))
-    fp.write(tmp_file2)
-
-    # copy the appearance stream from tmp_file2 to the main pdf
-    with Pdf.open(tmp_file2) as pdf2:
-        ap = pdf.copy_foreign(pdf2.pages[0]['/Annots'][0])['/AP']
-
-    # remove temporary files
-    os.remove(tmp_file)
-    os.remove(tmp_file2)
-
-    return ap
-
-
-def attach_file(pdf, annot, filespec):
-
-    pushpin = Dictionary(Type=Name('/Annot'),
-                         Subtype=Name('/FileAttachment'),
-                         Name=Name('/PushPin'),
-                         FS=filespec.obj,
-                         Rect=annot['/Rect'],
-                         Contents=filespec.description,   # file description
-                         C=(1.0, 1.0, 0.0),   # color
-                         T=None,   # author
-                         M=None)   # modification date, e.g.: 'D:20210101000000'
-
-    # Get an appearance stream and use it instead of the PushPin icon.
-    pushpin['/AP'] = create_appearance_stream(annot['/Rect'], pdf)
-
-    return pdf.make_indirect(pushpin)
 
 
 def user_args():
@@ -137,115 +72,232 @@ def user_args():
     return args
 
 
-def check_uri(uri, relative_path):
-    """Path if uri is a valid local file, else, None."""
+class Hyperlinks2Attachments:
 
-    if uri is None:
-        return
+    def __init__(self, pdf):
+        self._pdf = pdf
 
-    uri = str(uri)
+    @property
+    def pdf(self):
+        return self._pdf
 
-    # do nothing if remote link
-    if uri.startswith(('http:', 'https:', 'ftp:', 'mailto:')):
-        return
+    def _get_local_hyperlinks(self):
+        """Loop pages/annotations and return only those where hyperlinks point
+        to local files."""
 
-    # if uri starts with "file:" the path is absolute, else, is relative
-    if uri.startswith('file:///'):
+        HyperLink = namedtuple('HyperLink', ['page_idx',
+                                             'annotation_idx',
+                                             'position',
+                                             'uri'])
 
-        # three slashes:
-        # file:///C:/eclipse/eclipse.ini
-        # file://///mynetwordir/eclipse.ini
-        uri = Path(re.sub('^file:///', '', uri))
+        hlinks = []
+        for page in self.pdf.pages:
 
-    else:
+            if page.get('/Annots') is None:
+                continue
 
-        # path is relative to the input pdf file
-        uri = relative_path / uri
+            for annot_idx, annot in enumerate(page['/Annots']):
 
-    if not uri.exists():
-        raise ValueError(f"Local file '{uri}' does not exist.")
+                if annot.get('/A') is None:
+                    continue
 
-    return uri
+                if annot['/A'].get('/URI') is None:
+                    continue
+
+                uri = str(annot['/A'].get('/URI'))
+
+                # skip if remote file
+                if uri.startswith(('http:', 'https:', 'ftp:', 'mailto:')):
+                    continue
+
+                # check if local file has absolute or relative path
+                if uri.startswith('file:///'):
+
+                    # path is abolute
+                    # file:///C:/eclipse/eclipse.ini   (local file in local disk)
+                    # file://///mynetwordir/eclipse.ini   (local file in network disk)
+                    uri = Path(re.sub('^file:///', '', uri))
+
+                else:
+
+                    # path is relative to the pdf file
+                    uri = Path(self.pdf.filename).resolve().parent / uri
+
+                if not uri.exists():
+                    raise ValueError(f"Local file '{uri}' does not exist.")
+
+                hlinks.append(HyperLink(page.index,
+                                        annot_idx,
+                                        annot['/Rect'],
+                                        uri))
+
+        return hlinks
+
+    def _create_appearance_stream(self, rect):
+        """Return an appearance stream."""
+
+        # Note: As each viewer (Adobe, Evince, Okular, etc) has it own
+        # implementation of the default icons (Graph, PushPin, Paperclip, Tag), the
+        # icons do not have a standard appearance. Also, some viewers (e.g. the
+        # ones in Google Chrome and Microsoft Edge), only accept the v2 pdf
+        # standard, where there is no default icons, so no icon is show.
+        # The fix is to use an appearance stream, basically a dictionary listing
+        # exactly how the annotation/icon should be represented. This way the
+        # annotation/icon shows the same in all viewers.
+        # I could not create an appearance stream from scratch, so the solution was
+        # to use pdf-annotate (https://github.com/plangrid/pdf-annotate) to save an
+        # appearance stream to a file and reuse it.
+
+        # temporary files
+        tmp_file = tempfile.mktemp(suffix='.pdf')
+        tmp_file2 = tempfile.mktemp(suffix='.pdf')
+
+        # create empty file tmp_file
+        with Pdf.new() as fp:
+            fp.add_blank_page()
+            fp.save(tmp_file)
+
+        # add annotation to empty file and save it as tmp_file2
+        fp = PdfAnnotator(tmp_file)
+        fp.add_annotation(
+            'square',
+            Location(page=0,
+                     x1=float(rect[0]),
+                     y1=float(rect[1]),
+                     x2=float(rect[2]),
+                     y2=float(rect[3])),
+            Appearance(stroke_color=(1, 0, 0),
+                       stroke_width=1,
+                       stroke_transparency=0.5))
+        fp.write(tmp_file2)
+
+        # copy the appearance stream from tmp_file2 to the main pdf
+        with Pdf.open(tmp_file2) as pdf2:
+            ap = self.pdf.copy_foreign(pdf2.pages[0]['/Annots'][0])['/AP']
+
+        # remove temporary files
+        os.remove(tmp_file)
+        os.remove(tmp_file2)
+
+        return ap
+
+    def _attach_file(self, position, filespec):
+        """Attach local file to pdf."""
+
+        pushpin = Dictionary(Type=Name('/Annot'),
+                             Subtype=Name('/FileAttachment'),
+                             Name=Name('/PushPin'),
+                             FS=filespec.obj,
+                             Rect=position,
+                             Contents=filespec.description,   # file description
+                             C=(1.0, 1.0, 0.0),   # color
+                             T=None,   # author
+                             M=None)   # modification date, e.g.: 'D:20210101000000'
+
+        # Get an appearance stream and use it instead of the PushPin icon.
+        # Unlike the default (Graph, PushPin, Paperclip, Tag), the appearance
+        # stream has the same looks in all viewers
+        pushpin['/AP'] = self._create_appearance_stream(position)
+
+        return self.pdf.make_indirect(pushpin)
+
+    def _warn_if_same_name(self, files):
+        if len(files) != len(set(files)):
+            warnings.warn(
+                'There is hyperlinks referencing files with the same name '
+                '(not taking into account the directory path). The hyperlinks '
+                'will reference the correct attached files in the output pdf, '
+                'however, the lateral attachment bar in some pdf viewers (e.g.: '
+                'Firefox) will only display the first of the homonymous files.'
+            )
+
+    def hyperlinks2attachments(self):
+
+        hlinks = self._get_local_hyperlinks()
+        if len(hlinks) == 0:
+            print('No local hyperlink to attach.')
+            return
+
+        filespecs = {}
+        for idx, hlink in enumerate(hlinks, start=1):
+
+            print(f'Attaching {idx}/{len(hlinks)}')
+            print(f"  Local file '{hlink.uri}'")
+
+            # avoid attaching copies of the same file if two or more
+            # hyperlinks reference the file.
+            if hlink.uri not in filespecs:
+                filespecs[hlink.uri] = AttachedFileSpec.from_filepath(
+                    self.pdf,
+                    hlink.uri,
+                    description=hlink.uri.name)
+
+            # replace the hyperlink annotation with the attached file annotation
+            self.pdf.pages[hlink.page_idx]['/Annots'][hlink.annotation_idx] = \
+                self._attach_file(hlink.position,
+                                  filespecs[hlink.uri])
+
+        self._warn_if_same_name([x.name for x in filespecs])
+
+    def save(self, outfile):
+
+        # Default page layout when opening the pdf file. Some viewers may ignore it.
+        # https://pikepdf.readthedocs.io/en/latest/topics/pagelayout.html
+        self.pdf.Root.PageLayout = Name.OneColumn
+        self.pdf.Root.PageMode = Name.UseOutlines
+
+        # Do not allow a regular user to modify the file.
+        # This is simply a protection so that the user does not accidentally remove
+        # the attached file annotation when viewing the file in Adobe Acrobat Reader.
+        allow = Permissions(accessibility=True,
+                            extract=True,
+                            modify_annotation=False,
+                            modify_assembly=False,
+                            modify_form=False,
+                            modify_other=False,
+                            print_lowres=True,
+                            print_highres=True)
+        encryption = Encryption(user='', owner='admin123', allow=allow)
+
+        # linearize=True: Enables creating linear or "fast web view", where the
+        # file's contents are organized sequentially so that a viewer can begin
+        # rendering before it has the whole file. As a drawback, it tends to make
+        # files larger.
+        # https://pikepdf.readthedocs.io/en/latest/api/main.html#pikepdf.Pdf.save
+        self.pdf.save(outfile, linearize=True, encryption=encryption)
+
+
+def hyperlinks2attachments(infile, outfile):
+
+    infile = Path(infile)
+    outfile = Path(outfile)
+
+    if not infile.exists():
+        raise ValueError(f'Infile {infile} must exist.')
+
+    if infile.suffix != '.pdf':
+        raise ValueError(f'Infile {infile} must be a pdf file.')
+
+    if outfile.suffix != '.pdf':
+        raise ValueError(f'Outfile {outfile} must be a pdf file.')
+
+    with Pdf.open(infile) as pdf:
+        h2a = Hyperlinks2Attachments(pdf)
+        h2a.hyperlinks2attachments()
+        h2a.save(outfile)
 
 
 @Gooey(required_cols=1,
-       progress_regex=r"^Page (?P<current>\d+)/(?P<total>\d+)$",
+       progress_regex=r"^Attaching (?P<current>\d+)/(?P<total>\d+)$",
        progress_expr="current / total * 100")
 def main():
 
     args = user_args()
 
     print(f'Input file: {args.infile}')
-
-    pdf = Pdf.open(args.infile)
-
-    # Main loop based on:
-    # Post: https://stackoverflow.com/a/65977239
-    # Author: https://stackoverflow.com/users/14282700/shivang-raj
-    filespecs = {}
-    for page in pdf.pages:
-
-        print(f'Page {page.index + 1}/{len(pdf.pages)}')
-
-        for idx, annot in enumerate(page.get('/Annots', {})):
-
-            uri = annot.get('/A', {}).get('/URI')
-
-            uri = check_uri(uri, args.infile.parent)
-
-            if uri is None:
-                continue
-
-            print(f"  Attaching local file '{uri}'")
-
-            # avoid attaching copies of the same file if two or more hyperlinks
-            # reference the file.
-            if uri not in filespecs:
-                filespecs[uri] = AttachedFileSpec.from_filepath(
-                    pdf,
-                    uri,
-                    description=uri.name)
-
-            # replace the hyperlink annotation with the attached file annotation
-            page['/Annots'][idx] = attach_file(pdf, annot, filespecs[uri])
-
-    fnames = [x.name for x in filespecs.keys()]
-    if len(fnames) != len(set(fnames)):
-        warnings.warn(
-            'There is hyperlinks referencing files with the same name '
-            '(not taking into account the directory path). The hyperlinks will '
-            'reference the correct attached files in the output pdf, however, '
-            'the lateral attachment bar in pdf viewers (e.g. Adobe Acrobat '
-            'Reader, Firefox) will only display the first of the homonymous files.'
-        )
-
-    # Default page layout when opening the pdf file. Some viewers may ignore it.
-    # https://pikepdf.readthedocs.io/en/latest/topics/pagelayout.html
-    pdf.Root.PageLayout = Name.OneColumn
-    pdf.Root.PageMode = Name.UseOutlines
-
-    # Do not allow a regular user to modify the file.
-    # This is simply a protection so that the user does not accidentally remove
-    # the attached file annotation when viewing the file in Adobe Acrobat Reader.
-    allow = Permissions(accessibility=True,
-                        extract=True,
-                        modify_annotation=False,
-                        modify_assembly=False,
-                        modify_form=False,
-                        modify_other=False,
-                        print_lowres=True,
-                        print_highres=True)
-    encryption = Encryption(user='', owner='admin123', allow=allow)
-
     print(f'Output file: {args.outfile}')
-    # linearize=True: Enables creating linear or "fast web view", where the
-    # file's contents are organized sequentially so that a viewer can begin
-    # rendering before it has the whole file. As a drawback, it tends to make
-    # files larger.
-    # https://pikepdf.readthedocs.io/en/latest/api/main.html#pikepdf.Pdf.save
-    pdf.save(args.outfile, linearize=True, encryption=encryption)
 
-    pdf.close()
+    hyperlinks2attachments(args.infile, args.outfile)
 
     print('Done!')
 
