@@ -36,7 +36,7 @@ __Note:__ pikepdf anaconda [installation](https://anaconda.org/conda-forge/pikep
 
 * Export the `.docx` file to pdf. __Note:__ the pdf file should be exported, and not "printed" to pdf so the hyperlinks can be preserved. Open the pdf file and check if the hyperlinks were correctly exported.
 
-* The script can then be run with in CLI or GUI mode.
+* The script can then be run in CLI or GUI mode.
 
 __CLI__
 
